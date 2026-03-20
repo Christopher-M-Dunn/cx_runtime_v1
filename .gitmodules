@@ -1,6 +1,7 @@
 [submodule "riscv-gnu-toolchain"]
 	path = utils/riscv-gnu-toolchain
 	url = git@github.com:UBC-ORCA/riscv-gnu-toolchain.git
+	branch = dev
 [submodule "linux"]
     path = linux_cx
     url = git@github.com:UBC-ORCA/linux_cx.git
