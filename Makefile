@@ -115,9 +115,11 @@ example: examples/example.c $(LDIR)/libci.a
 qemu:
 	./qemu_cx/build/qemu-system-riscv32 -nographic -machine virt \
 	-kernel linux_cx/arch/riscv/boot/Image \
-	-initrd ~/Documents/linux_rv32/initramfs/initramfs.cpio.gz \
+	-initrd utils/initramfs/initramfs.cpio.gz \
 	-append "console=ttyS0" \
-	-icount shift=0
+	-icount shift=0 \
+	-virtfs local,path=./qemu-share,security_model=none,mount_tag=hostshare
+#~ added shared folder
 
 #	-cpu host,migratable=no,+invtsc,+tsc,+x2apic,+fsgsbase 
 
