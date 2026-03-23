@@ -22,8 +22,10 @@ QEMU-SRC := $(SRC)/cx-qemu
 
 ZOO-DIR := zoo
 
-cx_objects := $(BDIR)/ci.o $(BDIR)/queue.o $(BDIR)/parser.o
-cx_objects_m := $(BDIR)/ci_m.o $(BDIR)/queue.o $(BDIR)/parser.o
+#~ parser seems to be refrencing something that's been removed
+#~ ffa8b91 Removed parser (was used for SPIKE)
+cx_objects := $(BDIR)/ci.o $(BDIR)/queue.o #~ $(BDIR)/parser.o
+cx_objects_m := $(BDIR)/ci_m.o $(BDIR)/queue.o #~ $(BDIR)/parser.o
 cx_libraries := $(BDIR)/addsub.o $(BDIR)/muldiv.o $(BDIR)/mulacc.o $(BDIR)/p-ext.o $(BDIR)/vector.o $(BDIR)/max.o $(BDIR)/nn_acc.o 
 cx_helpers := $(QEMU-BDIR)/addsub_func.o $(QEMU-BDIR)/muldiv_func.o $(QEMU-BDIR)/mulacc_func.o $(QEMU-BDIR)/p-ext_func.o $(QEMU-BDIR)/vector_func.o $(QEMU-BDIR)/max_func.o $(QEMU-BDIR)/nn_acc_func.o 
 qemu_objects := $(cx_helpers) $(QEMU-BDIR)/exports.o

@@ -9,7 +9,7 @@ Make sure to install makeinfo before starting: `sudo apt-get install texinfo`
 
 **Run from utils directory.**
 
-2. run `./build-riscv-gnu.sh`
+2. run `./build-riscv-toolchain.sh`
 
 **Run from root directory**
 
