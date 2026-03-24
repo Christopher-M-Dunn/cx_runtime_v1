@@ -57,5 +57,7 @@ dkms.conf
 
 # Build dirs
 utils/riscv-gnu-toolchain
+utils/busybox/
+LOCALFILES/
 utils/riscv
 
