@@ -61,3 +61,5 @@ utils/busybox/
 LOCALFILES/
 utils/riscv
 utils/initramfs
+
+# qemu shared folder (contents ignored via qemu-share/.gitignore)
