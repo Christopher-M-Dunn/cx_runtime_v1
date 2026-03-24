@@ -60,4 +60,4 @@ utils/riscv-gnu-toolchain
 utils/busybox/
 LOCALFILES/
 utils/riscv
-
+utils/initramfs
