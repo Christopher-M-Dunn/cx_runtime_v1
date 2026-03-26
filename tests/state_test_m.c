@@ -2,10 +2,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "../../../../research/riscv-tools/cx_runtime/include/ci.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/mulacc/mulacc.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/addsub/addsub.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/p-ext/p-ext.h"
+#include "../include/ci.h"
+#include "../zoo/mulacc/mulacc.h"
+#include "../zoo/addsub/addsub.h"
+#include "../zoo/p-ext/p-ext.h"
 
 static cx_stctxs_t expected_stctxs = {.sel = {
                                 .dc = CX_DIRTY,

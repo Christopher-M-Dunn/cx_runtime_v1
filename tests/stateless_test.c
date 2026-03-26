@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "../../../../research/riscv-tools/cx_runtime/include/ci.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/addsub/addsub.h"
+#include "../include/ci.h"
+#include "../zoo/addsub/addsub.h"
 
 void stateless_test() {
     int a = 3;

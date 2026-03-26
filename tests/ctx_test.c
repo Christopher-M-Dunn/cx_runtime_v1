@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "../../../../research/riscv-tools/cx_runtime/include/ci.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/mulacc/mulacc.h"
+#include "../include/ci.h"
+#include "../zoo/mulacc/mulacc.h"
 
 void context_save_restore_test() {
   int a = 3;

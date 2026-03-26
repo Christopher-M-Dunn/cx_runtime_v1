@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "../../../../research/riscv-tools/cx_runtime/include/ci.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/p-ext/p-ext.h"
+#include "../include/ci.h"
+#include "../zoo/p-ext/p-ext.h"
 
 #define CX_SEL_TABLE_NUM_ENTRIES 1024
 

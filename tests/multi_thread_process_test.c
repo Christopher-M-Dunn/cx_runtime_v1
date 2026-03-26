@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "../../../../research/riscv-tools/cx_runtime/include/ci.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/mulacc/mulacc.h"
+#include "../include/ci.h"
+#include "../zoo/mulacc/mulacc.h"
 
 #include <sys/types.h>
 

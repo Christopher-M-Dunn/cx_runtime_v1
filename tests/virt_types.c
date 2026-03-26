@@ -2,10 +2,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "../../../../research/riscv-tools/cx_runtime/include/ci.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/mulacc/mulacc.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/addsub/addsub.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/muldiv/muldiv.h"
+#include "../include/ci.h"
+#include "../zoo/mulacc/mulacc.h"
+#include "../zoo/addsub/addsub.h"
+#include "../zoo/muldiv/muldiv.h"
 
 #include <sys/types.h>
 #include <sys/wait.h>
