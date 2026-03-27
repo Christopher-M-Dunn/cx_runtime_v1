@@ -1,3 +1,5 @@
+#include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -6,8 +8,6 @@
 #include "../zoo/mulacc/mulacc.h"
 #include "../zoo/addsub/addsub.h"
 #include "../zoo/muldiv/muldiv.h"
-
-#include <sys/types.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -53,7 +53,7 @@ void test_fork_0() {
   pid_t pid = fork(); 
   assert(pid >= 0);
 
-  if (pid == 0) { 
+  if (pid == 0) {
   // child process
     int cx_sel_C0 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
     assert(cx_sel_C0 > 0);
@@ -518,7 +518,7 @@ void use_prev_opened_in_parent() {
   cx_sel(CX_LEGACY);
 }
 
-void use_prev_opened_in_parent_and_child() {
+void use_prev_opened_inter_in_parent_and_child() {
 
   cx_error_t cx_error;
   uint cx_status;
@@ -526,6 +526,101 @@ void use_prev_opened_in_parent_and_child() {
   cx_sel_t cx_index, cx_index_0;
 
   int cx_sel_C0 = cx_open(CX_GUID_MULACC, CX_INTER_VIRT, -1);
+
+  assert(cx_sel_C0 > 0);
+
+  cx_error_clear();
+  cx_sel(cx_sel_C0);
+  result = mac(b, b);
+  assert( result == 25 );
+  uint init_mcx_val = cx_csr_read(MCX_SELECTOR);
+  
+  cx_error = cx_error_read();
+  assert( cx_error == 0 );
+  
+  cx_status = CX_READ_STATUS();
+  assert( cx_status == expected_stctxs.idx );
+
+  pid_t pid = fork();
+  if (pid < 0) {
+    perror("fork fail");
+    exit(1);
+  } else if (pid == 0) {
+    cx_sel_t cx_sel_C4 = cx_open(CX_GUID_MULDIV, CX_NO_VIRT, -1);
+    cx_sel_t cx_sel_C5 = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
+    assert( cx_sel_C4 > 0 );
+    assert( cx_sel_C5 > 0 );
+
+    cx_sel(cx_sel_C0);
+    result = mac(b, b);
+    assert(result == 50);
+    result = mac(b, b);
+    assert(result == 75);
+    result = mac(b, b);
+    assert(result == 100);
+    result = mac(b, b);
+    assert(result == 125);
+
+    cx_sel(cx_sel_C4);
+
+    result = mul(a, b);
+    assert( result == 15 );
+    result = mul(c, b);
+    assert( result == 10 );
+    result = mul(a, c);
+    assert( result == 6 );
+
+    cx_sel(cx_sel_C5);
+    result = add(a, b);
+    assert(result == 8);
+
+    cx_close(cx_sel_C0);
+    cx_close(cx_sel_C4);
+    cx_close(cx_sel_C5);
+
+    exit(EXIT_SUCCESS);
+  } else {
+    // child
+    cx_sel_t cx_sel_C1 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
+    assert( cx_sel_C1 > 0 );
+    
+    cx_sel(cx_sel_C0);
+    result = mac(b, c);
+    assert( result == 35 );
+    result = mac(b, c);
+    assert( result == 45 );
+    result = mac(b, c);
+    assert( result == 55 );
+
+    cx_sel(cx_sel_C1);
+    result = mac(a, c);
+    assert( result == 6 );
+
+    cx_close(cx_sel_C1);
+
+    int status;
+    // Wait for child
+    waitpid(pid, &status, 0);
+    assert(status == 0);
+  }
+
+  cx_sel(cx_sel_C0);
+  result = mac(b, b);
+  assert (result == 80 );
+
+  cx_close(cx_sel_C0);
+
+  cx_sel(CX_LEGACY);
+}
+
+void use_prev_opened_full_in_parent_and_child() {
+
+  cx_error_t cx_error;
+  uint cx_status;
+  int32_t state_result;
+  cx_sel_t cx_index, cx_index_0;
+
+  int cx_sel_C0 = cx_open(CX_GUID_MULACC, CX_FULL_VIRT, -1);
 
   assert(cx_sel_C0 > 0);
 
@@ -623,13 +718,7 @@ void close_unclosed_cx() {
 
   cx_sel_t cx_sel_C0 = cx_open(CX_GUID_MULACC, CX_INTER_VIRT, -1);
   assert(cx_sel_C0 > 0);
-
-  cx_sel_t cx_sel_C1;
-
-  int *glob_counter;
-  glob_counter = mmap(NULL, sizeof *glob_counter, PROT_READ | PROT_WRITE, 
-                    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  *glob_counter = 0;
+  assert(cx_error_read() == 0);
 
   pid_t pid = fork();
   if (pid < 0) {
@@ -638,25 +727,20 @@ void close_unclosed_cx() {
   } else if (pid == 0) {
     // child
     cx_sel_t cx_sel_C4 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
-    if (cx_sel_C4 > 0)
-      *glob_counter += 1;
+    assert(cx_sel_C4 > 0);
+    cx_sel(cx_sel_C0);
+    result = mac(a, b);
+    assert( result == a * b );
 
     exit(EXIT_SUCCESS);
   } else {
-    cx_sel_C1 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
-    if (cx_sel_C1 > 0)
-      *glob_counter += 1;
-
     int status;
     // Wait for child
-    wait(NULL);
+    waitpid(pid, &status, 0);
     assert(status == 0);
-    printf("counter: %d\n", *glob_counter);
-    assert(*glob_counter == 1);
-    munmap(glob_counter, sizeof *glob_counter);
   }
   cx_sel_t cx_sel_C5 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
-  assert( cx_sel_C5 < 0 );
+  assert( cx_sel_C5 > 0 );
 
   cx_close(cx_sel_C0);
   cx_close(cx_sel_C5);
@@ -671,6 +755,33 @@ void close_unclosed_cx() {
   cx_close(cx_sel_C7);
 
   cx_sel(CX_LEGACY);
+}
+
+void test_fork_fail() {
+  cx_sel_t cx_sel_A0 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
+  cx_sel_t cx_sel_A1 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
+  assert( cx_sel_A0 > 0 );
+  assert( cx_sel_A1 > 0 );
+  pid_t p = fork();
+  assert( errno == EAGAIN );
+  cx_sel(cx_sel_A0);
+  mac(a, b);
+  assert( cx_error_read() == 0 );
+  assert( a * b == CX_READ_STATE(0) );
+  cx_sel(cx_sel_A1);
+  mac(b, c);
+  assert( cx_error_read() == 0 );
+  assert( b * c == CX_READ_STATE(0) );
+  cx_close(cx_sel_A0);
+  cx_close(cx_sel_A1);
+  cx_sel_A0 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
+  cx_sel_A1 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
+  assert( cx_sel_A0 > 0 );
+  assert( cx_sel_A1 > 0 );
+  cx_close(cx_sel_A0);
+  cx_close(cx_sel_A1);
+
+  return;
 }
 
 

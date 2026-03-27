@@ -46,6 +46,45 @@ void basic_no_virt() {
     cx_close(cx_sel_A0);
 
     cx_close(cx_sel_A1);
+
+    pid_t pid = fork();
+    assert( pid >= 0);
+    if (pid == 0) {
+        cx_sel_A0 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
+        assert( cx_sel_A0 > 0 );
+        sleep(1);
+        cx_close(cx_sel_A0);
+        exit(EXIT_SUCCESS);
+    } else {
+        cx_sel_A0 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
+        assert( cx_sel_A0 > 0 );
+        wait(NULL);
+    }
+    cx_close(cx_sel_A0);
+
+    cx_sel_A0 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
+    assert (cx_sel_A0 > 0);
+
+    // TODO: Need a way to check if the mcx_selector values are different 
+    // across both processes
+    pid = fork();
+    assert( pid >= 0);
+    if (pid == 0) {
+        cx_sel(cx_sel_A0);
+        mac(a, a);
+        assert(cx_error_read() == 0);
+        assert(CX_READ_STATE(0) == a * a);
+        sleep(1);
+        cx_close(cx_sel_A0);
+        exit(EXIT_SUCCESS);
+    } else {
+        cx_sel(cx_sel_A0);
+        mac(b, b);
+        assert(cx_error_read() == 0);
+        assert(CX_READ_STATE(0) == b * b);
+        wait(NULL);
+    }
+    cx_close(cx_sel_A0);
 }
 
 void basic_intra_virt() {
@@ -206,7 +245,6 @@ void basic_full_virt() {
     cx_close( cx_sel_A1 );
 
 }
-
 
 int main() {
     basic_no_virt();

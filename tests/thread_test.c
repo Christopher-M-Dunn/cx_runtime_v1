@@ -26,6 +26,7 @@ void basic_thread_test() {
         perror("pthread_create() error");
         exit(3);
     }
+    free(ret);
 }
 
 void* cx_mac_thread(void *ptr) {
@@ -56,6 +57,7 @@ void cx_open_across_threads() {
     int res = CX_READ_STATE(0);
     assert( res == N * a * a);
     cx_close(cx_sel_A0);
+    free(ptr);
 
     return;
 }
