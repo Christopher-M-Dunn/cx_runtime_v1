@@ -6,6 +6,7 @@
 #include "../include/ci.h"
 #include "../zoo/addsub/addsub.h"
 
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/mman.h>

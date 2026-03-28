@@ -796,7 +796,8 @@ int main() {
       complex_fork_test();
       use_prev_opened_in_child();
       use_prev_opened_in_parent();
-      use_prev_opened_in_parent_and_child();
+      use_prev_opened_inter_in_parent_and_child();
+      use_prev_opened_full_in_parent_and_child();
     //   close_unclosed_cx();
     // }
 
