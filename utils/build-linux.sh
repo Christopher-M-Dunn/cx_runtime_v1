@@ -9,7 +9,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-git checkout cx_table
+git checkout cx_table_rebase
 
 if [ $? -ne 0 ]; then
 	echo "Couldn't find cx_table branch for linux."

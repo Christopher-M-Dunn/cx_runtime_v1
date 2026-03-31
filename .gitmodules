@@ -4,8 +4,8 @@
 	branch = dev
 [submodule "linux"]
     path = linux_cx
-    url = git@github.com:UBC-ORCA/linux_cx.git
-    branch = cx_table
+    url = git@github.com:Christopher-M-Dunn/linux-cxtg.git
+    branch = cx_table_rebase
 [submodule "qemu"]
     path = qemu_cx
     url = git@github.com:UBC-ORCA/qemu_cx.git
