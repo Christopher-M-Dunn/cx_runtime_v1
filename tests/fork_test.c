@@ -9,6 +9,9 @@
 #include "../zoo/addsub/addsub.h"
 #include "../zoo/muldiv/muldiv.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
@@ -425,7 +428,7 @@ void use_prev_opened_in_child() {
 
   cx_sel(cx_sel_C0);
   result = mac(b, b);
-  printf("result: %d\n", result);
+  VLOG("result: %d\n", result);
   assert (result == 50 );
 
   cx_close(cx_sel_C0);
@@ -785,7 +788,11 @@ void test_fork_fail() {
 }
 
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     // for (int i = 0; i < 1000; i++) {
       cx_sel(CX_LEGACY);
       test_fork();

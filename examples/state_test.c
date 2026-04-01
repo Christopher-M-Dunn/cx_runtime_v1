@@ -5,6 +5,9 @@
 #include "../include/ci.h"
 #include "../zoo/mulacc/mulacc.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 void state_test() {
     int a = 3;
     int b = 5;
@@ -122,7 +125,11 @@ void state_test() {
     cx_sel( CX_LEGACY );
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     cx_sel( CX_LEGACY );
     state_test();
     printf("state test passed\n");

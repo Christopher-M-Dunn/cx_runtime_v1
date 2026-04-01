@@ -38,6 +38,9 @@
 #include "../zoo/addsub/addsub.h"
 #include "../zoo/addsub/addsub_common.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 /* ------------------------------------------------------------------ */
 /* Helpers                                                              */
 /* ------------------------------------------------------------------ */
@@ -71,13 +74,13 @@ static void dump_csrs(const char *tag) {
     cx_sel_t cx_idx          = cx_csr_read(CX_INDEX);
     cx_selidx_t mcx_sel      = { .idx = cx_csr_read(MCX_SELECTOR) };
     cx_status_t cx_stat      = { .idx = cx_csr_read(CX_STATUS) };
-    printf("  [CSR %s]\n", tag);
-    printf("    CX_INDEX    (0x%03x): 0x%08x  (%d)\n", CX_INDEX, (uint)cx_idx, cx_idx);
-    printf("    MCX_SELECTOR(0x%03x): 0x%08x  cx_id=%u state_id=%u cxe=%u version=%u\n",
+    VLOG("  [CSR %s]\n", tag);
+    VLOG("    CX_INDEX    (0x%03x): 0x%08x  (%d)\n", CX_INDEX, (uint)cx_idx, cx_idx);
+    VLOG("    MCX_SELECTOR(0x%03x): 0x%08x  cx_id=%u state_id=%u cxe=%u version=%u\n",
            MCX_SELECTOR, mcx_sel.idx,
            mcx_sel.sel.cx_id, mcx_sel.sel.state_id,
            mcx_sel.sel.cxe,   mcx_sel.sel.version);
-    printf("    CX_STATUS   (0x%03x): 0x%08x  IV=%u IC=%u IS=%u OF=%u IF=%u OP=%u CU=%u\n",
+    VLOG("    CX_STATUS   (0x%03x): 0x%08x  IV=%u IC=%u IS=%u OF=%u IF=%u OP=%u CU=%u\n",
            CX_STATUS, cx_stat.idx,
            cx_stat.sel.IV, cx_stat.sel.IC, cx_stat.sel.IS,
            cx_stat.sel.OF, cx_stat.sel.IF, cx_stat.sel.OP, cx_stat.sel.CU);
@@ -88,16 +91,16 @@ static void dump_status_after_sel(cx_sel_t sel, const char *name) {
     cx_sel_t cx_idx          = cx_csr_read(CX_INDEX);
     cx_selidx_t mcx_sel      = { .idx = cx_csr_read(MCX_SELECTOR) };
     cx_stctxs_t hw_status    = { .idx = CX_READ_STATUS() };
-    printf("  [after cx_sel(%s=%d)]\n", name, sel);
-    printf("    CX_INDEX     = %d  (== sel? %s)\n", cx_idx, cx_idx == sel ? "YES" : "NO");
-    printf("    MCX_SELECTOR = 0x%08x  cx_id=%u state_id=%u cxe=%u version=%u\n",
+    VLOG("  [after cx_sel(%s=%d)]\n", name, sel);
+    VLOG("    CX_INDEX     = %d  (== sel? %s)\n", cx_idx, cx_idx == sel ? "YES" : "NO");
+    VLOG("    MCX_SELECTOR = 0x%08x  cx_id=%u state_id=%u cxe=%u version=%u\n",
            mcx_sel.idx,
            mcx_sel.sel.cx_id, mcx_sel.sel.state_id,
            mcx_sel.sel.cxe,   mcx_sel.sel.version);
     if (hw_status.idx == 0xffffffff) {
-        printf("    CX_STATUS(hw)= 0xffffffff  [stateless CXU: no state context]\n");
+        VLOG("    CX_STATUS(hw)= 0xffffffff  [stateless CXU: no state context]\n");
     } else {
-        printf("    CX_STATUS(hw)= 0x%08x  state_size=%u dc=%s(%u)\n",
+        VLOG("    CX_STATUS(hw)= 0x%08x  state_size=%u dc=%s(%u)\n",
                hw_status.idx, hw_status.sel.state_size,
                dc_name(hw_status.sel.dc), hw_status.sel.dc);
     }
@@ -107,7 +110,7 @@ static void dump_status_after_sel(cx_sel_t sel, const char *name) {
 /* Section 1: Initial CSR state                                        */
 /* ------------------------------------------------------------------ */
 static void test_initial_csr(void) {
-    printf("\n=== Section 1: Initial CSR state ===\n");
+    VLOG("\n=== Section 1: Initial CSR state ===\n");
     dump_csrs("initial");
     cx_sel_t cx_idx      = cx_csr_read(CX_INDEX);
     cx_error_t cx_error  = cx_error_read();
@@ -116,7 +119,7 @@ static void test_initial_csr(void) {
     CHECK_EQ("CX_STATUS == 0 (no errors) at startup", (int32_t)cx_error, 0);
     /* MCX_SELECTOR is not guaranteed to be 0 on non-first-boot; its contents
      * are irrelevant when CX_INDEX==0 (LEGACY mode). Printing for info. */
-    printf("  [INFO] MCX_SELECTOR = 0x%08x (may be non-zero from previous run; "
+    VLOG("  [INFO] MCX_SELECTOR = 0x%08x (may be non-zero from previous run; "
            "CX_INDEX=0 keeps LEGACY mode active regardless)\n", mcx_sel.idx);
 }
 
@@ -124,7 +127,7 @@ static void test_initial_csr(void) {
 /* Section 2: cx_open / cx_close for every CXU                        */
 /* ------------------------------------------------------------------ */
 static void test_open_close_all(void) {
-    printf("\n=== Section 2: cx_open/cx_close for all CXUs ===\n");
+    VLOG("\n=== Section 2: cx_open/cx_close for all CXUs ===\n");
 
     struct { cx_guid_t guid; const char *name; } cxus[] = {
         { CX_GUID_MULDIV,  "muldiv"  },
@@ -134,14 +137,14 @@ static void test_open_close_all(void) {
     };
 
     for (int i = 0; i < 4; i++) {
-        printf("\n  -- cx_open(%s guid=%d, CX_NO_VIRT) --\n",
+        VLOG("\n  -- cx_open(%s guid=%d, CX_NO_VIRT) --\n",
                cxus[i].name, cxus[i].guid);
 
         cx_sel_t cx_idx_before = cx_csr_read(CX_INDEX);
         cx_sel_t sel           = cx_open(cxus[i].guid, CX_NO_VIRT, -1);
         cx_sel_t cx_idx_after  = cx_csr_read(CX_INDEX);
 
-        printf("  cx_open returned: %d\n", sel);
+        VLOG("  cx_open returned: %d\n", sel);
 
         if (cxus[i].guid == -1) {
             CHECK("invalid GUID returns -1", sel == -1);
@@ -154,7 +157,7 @@ static void test_open_close_all(void) {
                 dump_status_after_sel(sel, cxus[i].name);
                 cx_sel(CX_LEGACY);
                 cx_close(sel);
-                printf("  cx_close(%d) done\n", sel);
+                VLOG("  cx_close(%d) done\n", sel);
                 CHECK_EQ("CX_INDEX back to 0 after cx_sel(LEGACY)",
                          (cx_sel_t)cx_csr_read(CX_INDEX), 0);
             }
@@ -166,14 +169,14 @@ static void test_open_close_all(void) {
 /* Section 3: Stateless CXUs — operations, div/0 diagnostic, refcount */
 /* ------------------------------------------------------------------ */
 static void test_stateless(void) {
-    printf("\n=== Section 3: Stateless CXUs (addsub, muldiv) ===\n");
+    VLOG("\n=== Section 3: Stateless CXUs (addsub, muldiv) ===\n");
     int result;
 
     /* addsub */
-    printf("\n  -- addsub --\n");
+    VLOG("\n  -- addsub --\n");
     cx_sel_t as1 = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
     cx_sel_t as2 = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
-    printf("  cx_open #1 = %d,  cx_open #2 = %d\n", as1, as2);
+    VLOG("  cx_open #1 = %d,  cx_open #2 = %d\n", as1, as2);
     CHECK("addsub open #1 > 0", as1 > 0);
     CHECK("addsub open #2 > 0", as2 > 0);
     CHECK_EQ("stateless: both opens return same table index", as1, as2);
@@ -190,10 +193,10 @@ static void test_stateless(void) {
     cx_close(as2);
 
     /* muldiv */
-    printf("\n  -- muldiv --\n");
+    VLOG("\n  -- muldiv --\n");
     cx_sel_t md1 = cx_open(CX_GUID_MULDIV, CX_NO_VIRT, -1);
     cx_sel_t md2 = cx_open(CX_GUID_MULDIV, CX_NO_VIRT, -1);
-    printf("  cx_open #1 = %d,  cx_open #2 = %d\n", md1, md2);
+    VLOG("  cx_open #1 = %d,  cx_open #2 = %d\n", md1, md2);
     CHECK("muldiv open #1 > 0", md1 > 0);
     CHECK("muldiv open #2 > 0", md2 > 0);
     CHECK_EQ("stateless: both opens return same table index", md1, md2);
@@ -210,7 +213,7 @@ static void test_stateless(void) {
          * (no trap).  However, QEMU's muldiv CXU implementation uses a bare C '/'
          * internally; on the x86 host this raises SIGFPE and crashes the VM.
          * TODO: fix the muldiv QEMU device to guard against b==0. */
-        printf("\n  -- div/0 diagnostic: SKIPPED (known QEMU muldiv bug: SIGFPE on host) --\n");
+        VLOG("\n  -- div/0 diagnostic: SKIPPED (known QEMU muldiv bug: SIGFPE on host) --\n");
 
         /* -- Error read idempotency --
          * Attempt to generate an error via overflow (mul(0x7fffffff, 2)), then
@@ -220,14 +223,14 @@ static void test_stateless(void) {
          * overflow — all reads return 0.  The idempotency tests pass vacuously.
          * We are NOT testing fence/clear ordering — no current CXU function is
          * slow enough for a fence to be observable. */
-        printf("\n  -- error read idempotency (mul overflow) --\n");
+        VLOG("\n  -- error read idempotency (mul overflow) --\n");
 
         /* Method 1: cx_error_read() */
         cx_error_clear();
         (void)mul(0x7fffffff, 2);               /* overflow → sets error bits */
         cx_error_t err_A = cx_error_read();
         cx_error_t err_B = cx_error_read();
-        printf("  cx_error_read():        A=0x%08x  B=0x%08x\n", err_A, err_B);
+        VLOG("  cx_error_read():        A=0x%08x  B=0x%08x\n", err_A, err_B);
         CHECK_EQ("cx_error_read() idempotent", (int32_t)err_A, (int32_t)err_B);
 
         /* Method 2: cx_csr_read(CX_STATUS) */
@@ -235,7 +238,7 @@ static void test_stateless(void) {
         (void)mul(0x7fffffff, 2);
         uint err_C = cx_csr_read(CX_STATUS);
         uint err_D = cx_csr_read(CX_STATUS);
-        printf("  cx_csr_read(CX_STATUS): C=0x%08x  D=0x%08x\n", err_C, err_D);
+        VLOG("  cx_csr_read(CX_STATUS): C=0x%08x  D=0x%08x\n", err_C, err_D);
         CHECK_EQ("cx_csr_read(CX_STATUS) idempotent", (int32_t)err_C, (int32_t)err_D);
 
         /* Method 3: CX_READ_STATUS() — reads the hw context status word (cx_stctxs_t),
@@ -245,7 +248,7 @@ static void test_stateless(void) {
         (void)mul(0x7fffffff, 2);
         uint err_E = CX_READ_STATUS();
         uint err_F = CX_READ_STATUS();
-        printf("  CX_READ_STATUS():       E=0x%08x  F=0x%08x\n", err_E, err_F);
+        VLOG("  CX_READ_STATUS():       E=0x%08x  F=0x%08x\n", err_E, err_F);
         CHECK_EQ("CX_READ_STATUS() idempotent", (int32_t)err_E, (int32_t)err_F);
 
         cx_error_clear();
@@ -260,13 +263,13 @@ static void test_stateless(void) {
 /* Section 4: CX_NO_VIRT — isolation, exhaustion, INTRA_VIRT fallback */
 /* ------------------------------------------------------------------ */
 static void test_no_virt_isolation(void) {
-    printf("\n=== Section 4: CX_NO_VIRT state isolation + exhaustion (mulacc) ===\n");
-    printf("  mulacc: %d state(s), guid=%d\n",
+    VLOG("\n=== Section 4: CX_NO_VIRT state isolation + exhaustion (mulacc) ===\n");
+    VLOG("  mulacc: %d state(s), guid=%d\n",
            CX_MULACC_NUM_STATES, CX_GUID_MULACC);
 
     cx_sel_t selA  = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
     cx_sel_t selB  = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
-    printf("  selA=%d  selB=%d\n", selA, selB);
+    VLOG("  selA=%d  selB=%d\n", selA, selB);
     CHECK("selA > 0", selA > 0);
     CHECK("selB > 0", selB > 0);
     CHECK("selA != selB (different table indices)", selA != selB);
@@ -297,24 +300,24 @@ static void test_no_virt_isolation(void) {
     /* -- Exhaustion test --
      * Both states are now in use (selA=state0 acc=0, selB=state1 acc=25).
      * A 3rd CX_NO_VIRT request must fail. */
-    printf("\n  -- Exhaustion: 3rd CX_NO_VIRT when both states are taken --\n");
+    VLOG("\n  -- Exhaustion: 3rd CX_NO_VIRT when both states are taken --\n");
     cx_sel_t selC_nv = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
-    printf("  3rd CX_NO_VIRT returned: %d  (expected -1)\n", selC_nv);
+    VLOG("  3rd CX_NO_VIRT returned: %d  (expected -1)\n", selC_nv);
     CHECK("3rd CX_NO_VIRT returns -1 when states exhausted", selC_nv == -1);
 
     /* -- INTRA_VIRT as software fallback --
      * With both hardware states occupied, CX_INTRA_VIRT should succeed by
      * mapping to the LRU state slot (software spill/fill).
      * The new handle gets its own fresh logical context (acc=0). */
-    printf("\n  -- INTRA_VIRT fallback when NO_VIRT is exhausted --\n");
+    VLOG("\n  -- INTRA_VIRT fallback when NO_VIRT is exhausted --\n");
     cx_sel_t selC_iv = cx_open(CX_GUID_MULACC, CX_INTRA_VIRT, -1);
-    printf("  CX_INTRA_VIRT fallback returned: %d  (expected > 0)\n", selC_iv);
+    VLOG("  CX_INTRA_VIRT fallback returned: %d  (expected > 0)\n", selC_iv);
     CHECK("CX_INTRA_VIRT succeeds via LRU spill when NO_VIRT exhausted", selC_iv > 0);
     if (selC_iv > 0) {
         dump_status_after_sel(selC_iv, "selC_iv");
         cx_sel(selC_iv);
         result = read_acc();
-        printf("  INTRA_VIRT spilled handle acc = %d  (expect 0: fresh logical ctx)\n", result);
+        VLOG("  INTRA_VIRT spilled handle acc = %d  (expect 0: fresh logical ctx)\n", result);
         CHECK_EQ("INTRA_VIRT fallback: fresh independent acc == 0", result, 0);
         /* Verify selA and selB were preserved by the spill/fill mechanism */
         cx_sel(selA);
@@ -339,20 +342,20 @@ static void test_no_virt_isolation(void) {
 /*   Sub-test C: explicit sharing via share_sel argument              */
 /* ------------------------------------------------------------------ */
 static void test_intra_virt(void) {
-    printf("\n=== Section 5: CX_INTRA_VIRT (mulacc) ===\n");
-    printf("  mulacc has %d hardware state slot(s).\n", CX_MULACC_NUM_STATES);
-    printf("  INTRA_VIRT semantics:\n");
-    printf("    share_sel=-1 : allocate a free slot, or spill LRU slot (own fresh context)\n");
-    printf("    share_sel=N  : share the SAME physical state as selector N\n");
+    VLOG("\n=== Section 5: CX_INTRA_VIRT (mulacc) ===\n");
+    VLOG("  mulacc has %d hardware state slot(s).\n", CX_MULACC_NUM_STATES);
+    VLOG("  INTRA_VIRT semantics:\n");
+    VLOG("    share_sel=-1 : allocate a free slot, or spill LRU slot (own fresh context)\n");
+    VLOG("    share_sel=N  : share the SAME physical state as selector N\n");
     int result;
 
     /* ------------------------------------------------------------------
      * Sub-test A: two -1 opens → each gets a free hardware state slot
      * ------------------------------------------------------------------ */
-    printf("\n  -- Sub-test A: two fresh INTRA_VIRT opens (share_sel=-1) --\n");
+    VLOG("\n  -- Sub-test A: two fresh INTRA_VIRT opens (share_sel=-1) --\n");
     cx_sel_t selA = cx_open(CX_GUID_MULACC, CX_INTRA_VIRT, -1);
     cx_sel_t selB = cx_open(CX_GUID_MULACC, CX_INTRA_VIRT, -1);
-    printf("  selA=%d  selB=%d\n", selA, selB);
+    VLOG("  selA=%d  selB=%d\n", selA, selB);
     CHECK("selA > 0", selA > 0);
     CHECK("selB > 0", selB > 0);
     CHECK("selA != selB (different table indices)", selA != selB);
@@ -385,22 +388,22 @@ static void test_intra_virt(void) {
      * OWN fresh context.  After switching back to selB the OS restores
      * the saved value (acc=9).
      * ------------------------------------------------------------------ */
-    printf("\n  -- Sub-test B: 3rd open (share_sel=-1) when slots full → LRU spill --\n");
-    printf("  selA acc=17 (2 ops), selB acc=9 (1 op) → LRU slot = selB's\n");
+    VLOG("\n  -- Sub-test B: 3rd open (share_sel=-1) when slots full → LRU spill --\n");
+    VLOG("  selA acc=17 (2 ops), selB acc=9 (1 op) → LRU slot = selB's\n");
     cx_sel_t selC = cx_open(CX_GUID_MULACC, CX_INTRA_VIRT, -1);
-    printf("  selC=%d\n", selC);
+    VLOG("  selC=%d\n", selC);
     CHECK("selC > 0 (INTRA_VIRT spill succeeded)", selC > 0);
     if (selC > 0) {
         dump_status_after_sel(selC, "selC");
         cx_sel(selC);
         result = read_acc();
-        printf("  selC read_acc() = %d  (expect 0: fresh independent context)\n", result);
+        VLOG("  selC read_acc() = %d  (expect 0: fresh independent context)\n", result);
         CHECK_EQ("selC: fresh logical context, acc == 0", result, 0);
         result = mac(5, 5);
         CHECK_EQ("selC: mac(5,5) = 25", result, 25);
 
         /* Spill/fill: switching back must restore preserved states */
-        printf("  Switching back to selA and selB to verify spill/fill...\n");
+        VLOG("  Switching back to selA and selB to verify spill/fill...\n");
         cx_sel(selA);
         result = read_acc();
         CHECK_EQ("selA preserved after selC spill: acc == 17", result, 17);
@@ -418,15 +421,15 @@ static void test_intra_virt(void) {
      * maps to the SAME physical state slot as selA.  Both selectors
      * see each other's writes immediately (no save/restore between them).
      * ------------------------------------------------------------------ */
-    printf("\n  -- Sub-test C: explicit sharing via share_sel=selA --\n");
-    printf("  selA currently has acc=17\n");
+    VLOG("\n  -- Sub-test C: explicit sharing via share_sel=selA --\n");
+    VLOG("  selA currently has acc=17\n");
     cx_sel_t selD = cx_open(CX_GUID_MULACC, CX_INTRA_VIRT, selA);
-    printf("  selD = cx_open(mulacc, CX_INTRA_VIRT, selA=%d) → %d\n", selA, selD);
+    VLOG("  selD = cx_open(mulacc, CX_INTRA_VIRT, selA=%d) → %d\n", selA, selD);
     CHECK("selD > 0 (sharing with selA)", selD > 0);
     if (selD > 0) {
         cx_sel(selD);
         result = read_acc();
-        printf("  selD read_acc() = %d  (expect 17: shares selA's state)\n", result);
+        VLOG("  selD read_acc() = %d  (expect 17: shares selA's state)\n", result);
         CHECK_EQ("selD shares selA's state: acc == 17", result, 17);
 
         result = mac(1, 1);
@@ -451,11 +454,11 @@ static void test_intra_virt(void) {
 /* Section 6: State reset on close + re-open; refcount                */
 /* ------------------------------------------------------------------ */
 static void test_state_reset_on_reopen(void) {
-    printf("\n=== Section 6: State reset on close + re-open; refcount ===\n");
+    VLOG("\n=== Section 6: State reset on close + re-open; refcount ===\n");
     int result;
 
     /* -- Basic state reset -- */
-    printf("\n  -- State reset after close + re-open --\n");
+    VLOG("\n  -- State reset after close + re-open --\n");
     cx_sel_t sel = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
     CHECK("open returns > 0", sel > 0);
     if (sel > 0) {
@@ -465,10 +468,10 @@ static void test_state_reset_on_reopen(void) {
         result = mac(1, 1);  CHECK_EQ("mac(1,1)=50 before close", result, 50);
         cx_sel(CX_LEGACY);
         cx_close(sel);
-        printf("  Closed sel=%d. Re-opening...\n", sel);
+        VLOG("  Closed sel=%d. Re-opening...\n", sel);
 
         cx_sel_t sel2 = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
-        printf("  new sel=%d\n", sel2);
+        VLOG("  new sel=%d\n", sel2);
         CHECK("re-open returns > 0", sel2 > 0);
         if (sel2 > 0) {
             cx_sel(sel2);
@@ -489,7 +492,7 @@ static void test_state_reset_on_reopen(void) {
      * Part 1: fresh opens (share_sel=-1) → distinct selectors each time.
      * Part 2: explicit sharing (share_sel=N) → same selector returned;
      *         close 3x, kernel "Freeing" should appear only after the last. */
-    printf("\n  -- Refcount test: stateless CXU (addsub) --\n");
+    VLOG("\n  -- Refcount test: stateless CXU (addsub) --\n");
 
     /* Part 1: fresh opens — current spec: stateless CXUs return the same
      * table index for all opens regardless of share_sel (no per-open state
@@ -500,7 +503,7 @@ static void test_state_reset_on_reopen(void) {
     cx_sel_t f1 = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
     cx_sel_t f2 = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
     cx_sel_t f3 = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
-    printf("  fresh opens (share_sel=-1): f1=%d  f2=%d  f3=%d\n", f1, f2, f3);
+    VLOG("  fresh opens (share_sel=-1): f1=%d  f2=%d  f3=%d\n", f1, f2, f3);
     CHECK("f1 > 0", f1 > 0);
     CHECK_EQ("stateless: all fresh opens return same index (f1==f2) [NOTE: may change in future spec]", f1, f2);
     CHECK_EQ("stateless: all fresh opens return same index (f2==f3) [NOTE: may change in future spec]", f2, f3);
@@ -512,7 +515,7 @@ static void test_state_reset_on_reopen(void) {
     cx_sel_t r1 = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
     cx_sel_t r2 = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, r1);
     cx_sel_t r3 = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, r2);
-    printf("  shared opens: r1=%d  r2=%d  r3=%d\n", r1, r2, r3);
+    VLOG("  shared opens: r1=%d  r2=%d  r3=%d\n", r1, r2, r3);
     CHECK("r1 > 0", r1 > 0);
     CHECK_EQ("shared open returns same selector (r1==r2)", r1, r2);
     CHECK_EQ("shared open returns same selector (r2==r3)", r2, r3);
@@ -524,14 +527,14 @@ static void test_state_reset_on_reopen(void) {
         cx_sel(CX_LEGACY);
     }
     cx_close(r1);
-    printf("  Closed 1x.\n");
+    VLOG("  Closed 1x.\n");
     dump_csrs("after closing ADDSUB r1");
     cx_close(r2);
-    printf("  Closed 2x.\n");
+    VLOG("  Closed 2x.\n");
     dump_csrs("after closing ADDSUB r2");
     cx_close(r3);
     dump_csrs("after closing ADDSUB r3");
-    printf("  Closed 3x.  'Freeing cx_index' should appear only after the 3rd close.\n");
+    VLOG("  Closed 3x.  'Freeing cx_index' should appear only after the 3rd close.\n");
 
     /* -- Refcount test (INTRA_VIRT sharing: mulacc) --
      *
@@ -541,7 +544,7 @@ static void test_state_reset_on_reopen(void) {
      *
      * Verified by: accumulating via the original selector, then reading
      * back via the shared handles. */
-    printf("\n  -- Refcount test: INTRA_VIRT sharing open x3 / close x3 --\n");
+    VLOG("\n  -- Refcount test: INTRA_VIRT sharing open x3 / close x3 --\n");
     cx_sel_t s1 = cx_open(CX_GUID_MULACC, CX_INTRA_VIRT, -1);
     CHECK("s1 > 0 (base handle)", s1 > 0);
     if (s1 > 0) {
@@ -551,7 +554,7 @@ static void test_state_reset_on_reopen(void) {
 
         cx_sel_t s2 = cx_open(CX_GUID_MULACC, CX_INTRA_VIRT, s1);
         cx_sel_t s3 = cx_open(CX_GUID_MULACC, CX_INTRA_VIRT, s1);
-        printf("  s1=%d  s2=%d  s3=%d\n", s1, s2, s3);
+        VLOG("  s1=%d  s2=%d  s3=%d\n", s1, s2, s3);
         CHECK("s2 > 0 (shares s1)", s2 > 0);
         CHECK("s3 > 0 (shares s1)", s3 > 0);
 
@@ -568,7 +571,7 @@ static void test_state_reset_on_reopen(void) {
         cx_sel(CX_LEGACY);
         if (s3 > 0) {
             cx_close(s3);
-            printf("INTRA_VIRT s3 closing\n");
+            VLOG("INTRA_VIRT s3 closing\n");
             cx_sel(s3); //if they are the same, this should be selecting s1
             result = read_acc();
             CHECK_EQ("reselecting s3, same as s1, that's stil open, so acc == 9", result, 9);
@@ -580,7 +583,7 @@ static void test_state_reset_on_reopen(void) {
         } 
                 if (s2 > 0) {
             cx_close(s2);
-            printf("INTRA_VIRT s2 closing\n");
+            VLOG("INTRA_VIRT s2 closing\n");
             cx_sel(s2); //if they are the same, this should be selecting s1
             result = read_acc();
             CHECK_EQ("reselecting s2, same as s1, that's stil open, so acc == 9", result, 9);
@@ -592,7 +595,7 @@ static void test_state_reset_on_reopen(void) {
         } 
         if (s1 > 0) {
             cx_close(s1);
-            printf("INTRA_VIRT s1 closing\n");
+            VLOG("INTRA_VIRT s1 closing\n");
             cx_sel(s1); //if they are the same, this should be selecting s1
             result = read_acc();
             CHECK("reselecting s1, shouldn't work. acc != 9", result != 9); // there's better ways to test this
@@ -609,50 +612,50 @@ static void test_state_reset_on_reopen(void) {
 /* Section 7: CX_INDEX tracks cx_sel() correctly                      */
 /* ------------------------------------------------------------------ */
 static void test_cx_index_tracking(void) {
-    printf("\n=== Section 7: CX_INDEX/MCX_SELECTOR tracking ===\n");
+    VLOG("\n=== Section 7: CX_INDEX/MCX_SELECTOR tracking ===\n");
 
     cx_sel_t selA = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
     cx_sel_t selB = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
     cx_sel_t selS = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
-    printf("  selA(mulacc)=%d  selB(mulacc)=%d  selS(addsub)=%d\n",
+    VLOG("  selA(mulacc)=%d  selB(mulacc)=%d  selS(addsub)=%d\n",
            selA, selB, selS);
 
     cx_sel(selA);
     cx_sel_t cx_idx      = cx_csr_read(CX_INDEX);
     cx_selidx_t mcx_sel  = { .idx = cx_csr_read(MCX_SELECTOR) };
-    printf("  after cx_sel(selA=%d): CX_INDEX=%d MCX_SELECTOR=0x%08x\n",
+    VLOG("  after cx_sel(selA=%d): CX_INDEX=%d MCX_SELECTOR=0x%08x\n",
            selA, cx_idx, mcx_sel.idx);
     CHECK_EQ("CX_INDEX == selA after cx_sel(selA)", cx_idx, selA);
-    printf("    MCX_SELECTOR decoded: cx_id=%u state_id=%u cxe=%u version=%u\n",
+    VLOG("    MCX_SELECTOR decoded: cx_id=%u state_id=%u cxe=%u version=%u\n",
            mcx_sel.sel.cx_id, mcx_sel.sel.state_id,
            mcx_sel.sel.cxe,   mcx_sel.sel.version);
 
     cx_sel(selB);
     cx_idx  = cx_csr_read(CX_INDEX);
     mcx_sel = (cx_selidx_t){ .idx = cx_csr_read(MCX_SELECTOR) };
-    printf("  after cx_sel(selB=%d): CX_INDEX=%d MCX_SELECTOR=0x%08x\n",
+    VLOG("  after cx_sel(selB=%d): CX_INDEX=%d MCX_SELECTOR=0x%08x\n",
            selB, cx_idx, mcx_sel.idx);
     CHECK_EQ("CX_INDEX == selB after cx_sel(selB)", cx_idx, selB);
-    printf("    MCX_SELECTOR decoded: cx_id=%u state_id=%u cxe=%u version=%u\n",
+    VLOG("    MCX_SELECTOR decoded: cx_id=%u state_id=%u cxe=%u version=%u\n",
            mcx_sel.sel.cx_id, mcx_sel.sel.state_id,
            mcx_sel.sel.cxe,   mcx_sel.sel.version);
 
     cx_sel(selS);
     cx_idx  = cx_csr_read(CX_INDEX);
     mcx_sel = (cx_selidx_t){ .idx = cx_csr_read(MCX_SELECTOR) };
-    printf("  after cx_sel(selS=%d): CX_INDEX=%d MCX_SELECTOR=0x%08x\n",
+    VLOG("  after cx_sel(selS=%d): CX_INDEX=%d MCX_SELECTOR=0x%08x\n",
            selS, cx_idx, mcx_sel.idx);
     CHECK_EQ("CX_INDEX == selS after cx_sel(selS)", cx_idx, selS);
-    printf("    MCX_SELECTOR decoded: cx_id=%u state_id=%u cxe=%u version=%u\n",
+    VLOG("    MCX_SELECTOR decoded: cx_id=%u state_id=%u cxe=%u version=%u\n",
            mcx_sel.sel.cx_id, mcx_sel.sel.state_id,
            mcx_sel.sel.cxe,   mcx_sel.sel.version);
 
     cx_sel(CX_LEGACY);
     cx_idx  = cx_csr_read(CX_INDEX);
     mcx_sel = (cx_selidx_t){ .idx = cx_csr_read(MCX_SELECTOR) };
-    printf("  after cx_sel(LEGACY=0):\n");
-    printf("    CX_INDEX     = %d\n", cx_idx);
-    printf("    MCX_SELECTOR = 0x%08x  cx_id=%u state_id=%u cxe=%u version=%u\n",
+    VLOG("  after cx_sel(LEGACY=0):\n");
+    VLOG("    CX_INDEX     = %d\n", cx_idx);
+    VLOG("    MCX_SELECTOR = 0x%08x  cx_id=%u state_id=%u cxe=%u version=%u\n",
            mcx_sel.idx,
            mcx_sel.sel.cx_id, mcx_sel.sel.state_id,
            mcx_sel.sel.cxe,   mcx_sel.sel.version);
@@ -669,7 +672,7 @@ static void test_cx_index_tracking(void) {
 /* Section 8: cx_open does not disturb active CX_INDEX                */
 /* ------------------------------------------------------------------ */
 static void test_open_preserves_index(void) {
-    printf("\n=== Section 8: cx_open preserves active CX_INDEX ===\n");
+    VLOG("\n=== Section 8: cx_open preserves active CX_INDEX ===\n");
 
     cx_sel_t selA = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
     CHECK("selA > 0", selA > 0);
@@ -677,11 +680,11 @@ static void test_open_preserves_index(void) {
 
     cx_sel(selA);
     uint cx_idx_before = cx_csr_read(CX_INDEX);
-    printf("  CX_INDEX before 2nd cx_open: %u\n", cx_idx_before);
+    VLOG("  CX_INDEX before 2nd cx_open: %u\n", cx_idx_before);
 
     cx_sel_t selB  = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
     uint cx_idx_after = cx_csr_read(CX_INDEX);
-    printf("  CX_INDEX after cx_open(selB): %u  selB=%d\n", cx_idx_after, selB);
+    VLOG("  CX_INDEX after cx_open(selB): %u  selB=%d\n", cx_idx_after, selB);
     CHECK_EQ("cx_open does not change active CX_INDEX",
              (int32_t)cx_idx_after, (int32_t)cx_idx_before);
 
@@ -694,29 +697,29 @@ static void test_open_preserves_index(void) {
 /* Section 9: Error cases                                              */
 /* ------------------------------------------------------------------ */
 static void test_errors(void) {
-    printf("\n=== Section 9: Error cases ===\n");
+    VLOG("\n=== Section 9: Error cases ===\n");
     cx_sel_t sel;
 
     sel = cx_open(-1, CX_NO_VIRT, -1);
-    printf("  cx_open(guid=-1):   %d\n", sel);
+    VLOG("  cx_open(guid=-1):   %d\n", sel);
     CHECK("invalid GUID -1 returns -1", sel == -1);
 
     sel = cx_open(9999, CX_NO_VIRT, -1);
-    printf("  cx_open(guid=9999): %d\n", sel);
+    VLOG("  cx_open(guid=9999): %d\n", sel);
     CHECK("unknown GUID 9999 returns -1", sel == -1);
 
     /* Exhaust all mulacc states (NUM_STATES=2), then try CX_NO_VIRT again */
-    printf("\n  Exhausting all %d mulacc CX_NO_VIRT states...\n",
+    VLOG("\n  Exhausting all %d mulacc CX_NO_VIRT states...\n",
            CX_MULACC_NUM_STATES);
     cx_sel_t slots[8];
     int n = 0;
     for (int i = 0; i < CX_MULACC_NUM_STATES; i++) {
         slots[n] = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
-        printf("    cx_open #%d = %d\n", i+1, slots[n]);
+        VLOG("    cx_open #%d = %d\n", i+1, slots[n]);
         if (slots[n] > 0) n++;
     }
     sel = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
-    printf("  cx_open after exhaustion: %d\n", sel);
+    VLOG("  cx_open after exhaustion: %d\n", sel);
     CHECK("CX_NO_VIRT fails when all states taken", sel == -1);
 
     for (int i = 0; i < n; i++) cx_close(slots[i]);
@@ -725,7 +728,11 @@ static void test_errors(void) {
 /* ------------------------------------------------------------------ */
 /* main                                                                */
 /* ------------------------------------------------------------------ */
-int main(void) {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     printf("========================================\n");
     printf("  CX PROBE & DIAGNOSTIC TEST\n");
     printf("  mulacc guid=%d states=%d\n", CX_GUID_MULACC, CX_MULACC_NUM_STATES);

@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "../../../../research/riscv-tools/cx_runtime/include/ci.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/mulacc/mulacc.h"
-#include "../../../../research/riscv-tools/cx_runtime/zoo/addsub/addsub.h"
+#include "../include/ci.h"
+#include "../zoo/mulacc/mulacc.h"
+#include "../zoo/addsub/addsub.h"
+
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
 
 void cx_error_test( cx_sel_t cx_sel ) {
     cx_error_t cx_error = cx_error_read();
@@ -55,7 +58,11 @@ void state_test() {
   cx_sel( CX_LEGACY );
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     cx_sel( CX_LEGACY );
     state_test();
     return 0;

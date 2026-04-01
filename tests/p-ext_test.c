@@ -5,6 +5,9 @@
 #include "../include/ci.h"
 #include "../zoo/p-ext/p-ext.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 #define CX_SEL_TABLE_NUM_ENTRIES 1024
 
 #define i8 int8_t
@@ -160,7 +163,11 @@ void pext_test() {
     cx_sel( CX_LEGACY );
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     cx_sel( CX_LEGACY );
     pext_test();
     printf("p-ext test passed\n");

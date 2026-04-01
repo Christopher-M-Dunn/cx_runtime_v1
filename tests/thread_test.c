@@ -7,6 +7,9 @@
 #include "../include/ci.h"
 #include "../zoo/mulacc/mulacc.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 static const int a = 5, b = 3;
 
 void* test_thread() {
@@ -62,7 +65,11 @@ void cx_open_across_threads() {
     return;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     basic_thread_test();
     cx_open_across_threads();
     printf("Thread test complete\n");

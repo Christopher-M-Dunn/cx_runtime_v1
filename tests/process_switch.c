@@ -17,6 +17,9 @@
 #include "../include/ci.h"
 #include "../zoo/mulacc/mulacc.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 #define nloops 1
 
 
@@ -55,6 +58,10 @@ static int init_perf_counter(int kern) {
 }
 
 int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     // measure context switch
     cpu_set_t set;
     CPU_ZERO(&set);

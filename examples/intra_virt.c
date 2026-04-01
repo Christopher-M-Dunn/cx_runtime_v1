@@ -5,6 +5,9 @@
 #include "../include/ci.h"
 #include "../zoo/mulacc/mulacc.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 int a = 5, b = 3, c = 2, res = 0;
 
 void intra_open_1() {
@@ -197,7 +200,11 @@ void intra_open_6() {
     cx_sel( CX_LEGACY );
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     intra_open_1();
     intra_open_2();
     intra_open_3();

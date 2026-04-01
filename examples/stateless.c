@@ -6,6 +6,9 @@
 #include "../zoo/muldiv/muldiv.h"
 #include "../zoo/addsub/addsub.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 void test() {
     int a = 3, b = 5, result = 0;
 
@@ -43,7 +46,11 @@ void test() {
     cx_sel( CX_LEGACY );
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     test();
     printf("stateless test passed!\n");
     return 0;

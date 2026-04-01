@@ -8,6 +8,9 @@
 #include "../include/ci.h"
 #include "../zoo/mulacc/mulacc.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 #include <sys/types.h>
 
 #include <sys/types.h>
@@ -164,9 +167,9 @@ void scalar_matmul(int** A, int** B, int** C, int m, int n) {
 void print_mat(int **A, int m, int n) {
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++) {
-      printf("%d ", A[i][j]);
+      VLOG("%d ", A[i][j]);
     }
-    printf("\n");
+    VLOG("\n");
   }
 }
 
@@ -186,7 +189,8 @@ void* mm_worker(void *targs) {
         mac(A[i][k], B[k][j]);
       }
       C[i][j] = CX_READ_STATE(0);
-      reset(0, 0);
+      //reset(0, 0);
+      reset();
     }
   }
   return NULL;
@@ -309,7 +313,11 @@ void matmul_multiP_multiT_intra() {
   cx_sel(CX_LEGACY);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     cx_sel(CX_LEGACY);
     // test_matmul();
     matmul_multiP_multiT_intra();

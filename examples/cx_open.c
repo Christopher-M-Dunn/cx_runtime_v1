@@ -5,6 +5,9 @@
 #include "../include/ci.h"
 #include "../zoo/mulacc/mulacc.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 int a = 5, b = 3, result = 0;
 void exclusive_open() {
     cx_sel_t sel = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
@@ -86,7 +89,11 @@ void mixed_open_1() {
     cx_close(sel); 
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     // exclusive_open();
     // inter_open();
     // exclusive_open_2();

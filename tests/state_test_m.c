@@ -7,6 +7,9 @@
 #include "../zoo/addsub/addsub.h"
 #include "../zoo/p-ext/p-ext.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 static cx_stctxs_t expected_stctxs = {.sel = {
                                 .dc = CX_DIRTY,
                                 .R = 0,
@@ -123,7 +126,11 @@ void system_test() {
 
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     cx_init();
     cx_sel( CX_LEGACY );
     state_test();

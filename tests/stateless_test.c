@@ -6,6 +6,9 @@
 #include "../include/ci.h"
 #include "../zoo/addsub/addsub.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -101,7 +104,11 @@ void stateless_fork_multiple_opens() {
     cx_sel( CX_LEGACY );
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
 
     cx_sel( CX_LEGACY );
     basic_stateless_test();

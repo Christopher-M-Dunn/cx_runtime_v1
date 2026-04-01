@@ -3,6 +3,9 @@
 #include <stdlib.h>
 
 #include "../include/ci.h"
+
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
 #include "../zoo/addsub/addsub.h"
 #include "../zoo/muldiv/muldiv.h"
 
@@ -64,9 +67,13 @@ void my_cx_test()
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
-    cx_sel( CX_LEGACY ); // ABI rule 2 
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
+    cx_sel( CX_LEGACY ); // ABI rule 2
     my_cx_test();
     return 0;
 }

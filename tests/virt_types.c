@@ -7,6 +7,9 @@
 #include "../zoo/addsub/addsub.h"
 #include "../zoo/muldiv/muldiv.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
@@ -246,7 +249,11 @@ void basic_full_virt() {
 
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     basic_no_virt();
     basic_intra_virt();
     basic_inter_virt();

@@ -16,6 +16,9 @@
 #include "../zoo/mulacc/mulacc.h"
 #include "../zoo/muldiv/muldiv.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 #define N 10000LL
 static int res = 0, a = 3, b = 5;
 
@@ -173,9 +176,13 @@ long long get_close_insn_count() {
 int
 main(int argc, char **argv)
 {
-    
-    // The first select initializes some of the kernel structures, and thus has a higher 
-    // overhead. We shouldn't count that one. 
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
+
+    // The first select initializes some of the kernel structures, and thus has a higher
+    // overhead. We shouldn't count that one.
     cx_sel_t selA = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
     cx_close(selA);
 

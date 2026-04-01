@@ -9,6 +9,9 @@
 #include "../include/ci.h"
 #include "../zoo/mulacc/mulacc.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 
 int a = 5, b = 3, res = 0;
 
@@ -159,7 +162,11 @@ void multi_thread_2() {
 //     cx_close(selB);
 // }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     for (int i = 0; i < 100; i++) {
         multi_thread_1();
         multi_thread_2();

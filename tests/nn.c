@@ -12,6 +12,9 @@
 #include "../zoo/mulacc/mulacc.h"
 #include "../zoo/nn_acc/nn_acc.h"
 
+static int verbose = 0;
+#define VLOG(...) do { if (verbose) printf(__VA_ARGS__); } while(0)
+
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
@@ -65,9 +68,9 @@ int *gen_mat(int m, int n)
 void print_mat(int *A, int m, int n) {
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++) {
-      printf("%d ", A[IDX(i, j, n)]);
+      VLOG("%d ", A[IDX(i, j, n)]);
     }
-    printf("\n");
+    VLOG("\n");
   }
 }
 
@@ -75,7 +78,7 @@ void mat_check_equal(int *A, int *B, int m, int n) {
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++) {
       if (A[IDX(i, j, n)] != B[IDX(i, j, n)]) {
-        printf("i: %d, j: %d, A: %d, B: %d\n", i, j, A[IDX(i, j, n)], B[IDX(i, j, n)]);
+        VLOG("i: %d, j: %d, A: %d, B: %d\n", i, j, A[IDX(i, j, n)], B[IDX(i, j, n)]);
       }
       assert(A[IDX(i, j, n)] == B[IDX(i, j, n)]);
     }
@@ -220,7 +223,11 @@ void run_nn() {
     cx_sel(CX_LEGACY);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-' && argv[i][1] == 'v')
+            verbose = 1;
+    }
     cx_sel_t sel = cx_open(CX_GUID_MAX, CX_NO_VIRT, -1);
     cx_close(sel);
     run_nn();
