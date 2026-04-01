@@ -13,6 +13,8 @@ After defining the 3 files, the \<CX_name\>_func.h header needs to be included i
 
 The function pointer array needs to be added to zoo/exports.c in cx_funcs. Additionally, the num_cfs and num_states should be updated as well.
 
+**CF ID convention:** `<CX_NAME>_NUM_FUNCS` must equal the highest CF ID + 1, not the count of implemented functions. This value does not include system the CFs (1020-1023) that stateful CXUs must implement. CF IDs do not need to be contiguous, but unused slots within the range must be set to `NULL`. The runtime (cx_helper) sets the IF flag and returns -1 when it encounters a NULL slot. In simulation, CXU functions cannot set flags directly — this requires returning sentinal values or passing `env` into the function signature, which is future work.
+
 The Makefile in the cx_runtime/ directory should be updated as well. Rules should be added to build the \<CX_name\>_func.c for qemu using the host compiler, and the \<CX_name\>.c using the RISC-V cross-compiler. mulacc can be referenced for an example on how to add a new CXU to the Makefile. 
 
 Finally, update the NUM_CX value in include/utils.h.
