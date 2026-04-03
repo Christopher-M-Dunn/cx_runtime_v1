@@ -1,3 +1,4 @@
+sudo -v
 pushd ..
 source ./settings.sh
 make clean && make
