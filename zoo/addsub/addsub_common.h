@@ -2,7 +2,7 @@
 #define ADDSUB_COMMON_H
 
 #define CX_GUID_ADDSUB 4
-#define CX_ADDSUB_NUM_FUNCS 5
+#define CX_ADDSUB_NUM_FUNCS 7
 #define CX_ADDSUB_NUM_STATES 0
 
 #endif

@@ -28,6 +28,69 @@
 #define MAX_CX_ID 255
 #define NUM_CX 8
 
+/* =========  CX function return sentinels  ==================================
+ *
+ * CXU functions return int32_t. These sentinel values occupy the extreme ends
+ * of the int32_t range and are reserved for signalling flags back to the
+ * runtime (pending a proper solution where env is passed into CXU functions).
+ * A truly invalid function (NULL function pointer) returns -1 and sets IF flag.
+ * All below sentinel values will be converted to a user returned value of -1
+ * unless otherwise stated.
+ *
+ * Positive sentinels (INT32_MAX = 0x7FFFFFFF downward):
+ *   OP_POS             — OP flag; Arithmetic error or overflow, returns INTMAX
+ *   IF_INVALID_RET_0   — IF flag; Invalid function, but handled by the CXU
+ *                        Returns 0.
+ *   CU_CUSTOM_BIT_0..15 — CU flag; Sets the Nth bit of cxs_error CSR
+ *
+ * Negative Sentinels (INT32_MIN = 0x80000000 upward):
+ *   OP_NEG             — OP flag; Arithmetic error or underflow, returns INTMIN
+ *   OP_DOMAIN          — request operand(s) or state are a domain error for the
+ *                        custom function or custom CSR access. Returns -1
+ *   CU_CUSTOM_BIT_16..31 — CU flag; Sets the Nth bit of cxs_error CSR
+ *   IF_INVALID_RET_NEG1 — Invalid function, but handled by the CXU
+ *
+ * ========================================================================= */
+
+#define FUNC_SENTINEL_OP_POS              ((int32_t) 0x7FFFFFFF)  /* INT32_MAX     */
+#define FUNC_SENTINEL_IF_INVALID_RET_0    ((int32_t) 0x7FFFFFFE)  /* INT32_MAX - 1 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_0     ((int32_t) 0x7FFFFFFD)  /* INT32_MAX - 2 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_1     ((int32_t) 0x7FFFFFFC)  /* INT32_MAX - 3 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_2     ((int32_t) 0x7FFFFFFB)  /* INT32_MAX - 4 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_3     ((int32_t) 0x7FFFFFFA)  /* INT32_MAX - 5 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_4     ((int32_t) 0x7FFFFFF9)  /* INT32_MAX - 6 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_5     ((int32_t) 0x7FFFFFF8)  /* INT32_MAX - 7 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_6     ((int32_t) 0x7FFFFFF7)  /* INT32_MAX - 8 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_7     ((int32_t) 0x7FFFFFF6)  /* INT32_MAX - 9 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_8     ((int32_t) 0x7FFFFFF5)  /* INT32_MAX - 10 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_9     ((int32_t) 0x7FFFFFF4)  /* INT32_MAX - 11 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_10    ((int32_t) 0x7FFFFFF3)  /* INT32_MAX - 12 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_11    ((int32_t) 0x7FFFFFF2)  /* INT32_MAX - 13 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_12    ((int32_t) 0x7FFFFFF1)  /* INT32_MAX - 14 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_13    ((int32_t) 0x7FFFFFF0)  /* INT32_MAX - 15 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_14    ((int32_t) 0x7FFFFFEF)  /* INT32_MAX - 16 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_15    ((int32_t) 0x7FFFFFEE)  /* INT32_MAX - 17 */
+
+#define FUNC_SENTINEL_OP_NEG              ((int32_t) 0x80000000)  /* INT32_MIN      */
+#define FUNC_SENTINEL_OP_DOMAIN           ((int32_t) 0x80000001)  /* INT32_MIN + 1  */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_16    ((int32_t) 0x80000002)  /* INT32_MIN + 2  */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_17    ((int32_t) 0x80000003)  /* INT32_MIN + 3  */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_18    ((int32_t) 0x80000004)  /* INT32_MIN + 4  */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_19    ((int32_t) 0x80000005)  /* INT32_MIN + 5  */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_20    ((int32_t) 0x80000006)  /* INT32_MIN + 6  */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_21    ((int32_t) 0x80000007)  /* INT32_MIN + 7  */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_22    ((int32_t) 0x80000008)  /* INT32_MIN + 8  */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_23    ((int32_t) 0x80000009)  /* INT32_MIN + 9  */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_24    ((int32_t) 0x8000000A)  /* INT32_MIN + 10 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_25    ((int32_t) 0x8000000B)  /* INT32_MIN + 11 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_26    ((int32_t) 0x8000000C)  /* INT32_MIN + 12 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_27    ((int32_t) 0x8000000D)  /* INT32_MIN + 13 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_28    ((int32_t) 0x8000000E)  /* INT32_MIN + 14 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_29    ((int32_t) 0x8000000F)  /* INT32_MIN + 15 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_30    ((int32_t) 0x80000010)  /* INT32_MIN + 16 */
+#define FUNC_SENTINEL_CU_CUSTOM_BIT_31    ((int32_t) 0x80000011)  /* INT32_MIN + 17 */
+#define FUNC_SENTINEL_IF_INVALID_RET_NEG1 ((int32_t) 0x80000012)  /* INT32_MIN + 18 */
+
 // number of words in a state
 // for space reasons (laziness), this is not the proper size
 // because none of the current cxus use more space.
