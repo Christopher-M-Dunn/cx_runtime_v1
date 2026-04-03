@@ -19,11 +19,13 @@
  *     malformed/injected instruction word.
  *
  * Test groups:
- *   A. Stateful CXU (mulacc): valid CFs, out-of-range, system CFs
- *   B. Stateless CXU (addsub): valid CFs, out-of-range, system CFs
+ *   A. Stateful CXU (mulacc): valid CFs, dc=DIRTY check, out-of-range, system CFs
+ *   B. Stateless CXU (addsub): valid CFs, NULL holes, cx_func_undefined, out-of-range
  *   C. Cumulative flag accumulation
  *   D. Invalid selector (IV+IC+IS, no IF)
  *   E. Stateless + Stateful muldiv cross-check
+ *   F. OF flag: dc=CX_OFF on stateful CXU
+ *   G. Sentinel return values: IF (cx_func_undefined), OP, CU
  */
 
 #include <stdio.h>
@@ -69,7 +71,9 @@ static inline int32_t cf_add_null(void)  { return CX_REG_HELPER(1,    0, 0); } /
 static inline int32_t cf_add_sub(void)   { return CX_REG_HELPER(2,    5, 3); } /* addsub CF 2 (sub, valid) */
 static inline int32_t cf_add_null2(void) { return CX_REG_HELPER(3,    0, 0); } /* addsub CF 3 (NULL slot) */
 static inline int32_t cf_add_last(void)  { return CX_REG_HELPER(4,    0, 0); } /* addsub CF 4 (add_1000, last valid) */
-static inline int32_t cf_add_oob(void)   { return CX_REG_HELPER(5,    0, 0); } /* addsub CF 5 (one past last) */
+static inline int32_t cf_add_op(void)    { return CX_REG_HELPER(5,    0, 0); } /* addsub CF 5 (OP sentinel) */
+static inline int32_t cf_add_cu(void)    { return CX_REG_HELPER(6,    0, 0); } /* addsub CF 6 (CU sentinel) */
+static inline int32_t cf_add_oob(void)   { return CX_REG_HELPER(7,    0, 0); } /* addsub CF 7 (one past last) */
 static inline int32_t cf_mid_oob(void)   { return CX_REG_HELPER(500,  0, 0); } /* mid-range, unregistered */
 static inline int32_t cf_sys_1020(void)  { return CX_REG_HELPER(1020, 0, 0); } /* write_state */
 static inline int32_t cf_sys_1021(void)  { return CX_REG_HELPER(1021, 0, 0); } /* read_state */
@@ -100,6 +104,10 @@ int main(int argc, char *argv[]) {
     cf_mac();
     print_status("after CF 0 (valid)");
     CHECK("A1: stateful valid CF 0 -- no flags", read_status().idx == 0);
+    {
+        cx_stctxs_t st = {.idx = CX_READ_STATUS()};
+        CHECK("A1: stateful valid CF 0 -- dc is DIRTY", st.sel.dc == CX_DIRTY);
+    }
 
     cx_error_clear();
     cf_mac_last();
@@ -147,7 +155,7 @@ int main(int argc, char *argv[]) {
     cx_sel(CX_LEGACY);
 
     /* ------------------------------------------------------------------ */
-    printf("\n--- B. Stateless CXU (addsub, CFs 0-%d, holes at 1 and 3, no system CFs) ---\n",
+    printf("\n--- B. Stateless CXU (addsub, CFs 0-%d, NULL holes at 1+3, cx_func_undefined at 3, sentinels at 5+6) ---\n",
            CX_ADDSUB_NUM_FUNCS - 1);
 
     sel_as = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
@@ -173,10 +181,10 @@ int main(int argc, char *argv[]) {
 
     cx_error_clear();
     cf_add_null2();
-    print_status("after CF 3 (NULL slot)");
-    CHECK("B4: stateless CF 3 (NULL) -- IF set",   read_status().sel.IF == 1);
-    CHECK("B4: stateless CF 3 (NULL) -- IC clear", read_status().sel.IC == 0);
-    CHECK("B4: stateless CF 3 (NULL) -- IS clear", read_status().sel.IS == 0);
+    print_status("after CF 3 (cx_func_undefined, FUNC_SENTINEL_IF_INVALID_RET_0)");
+    CHECK("B4: stateless CF 3 (cx_func_undefined) -- IF set",   read_status().sel.IF == 1);
+    CHECK("B4: stateless CF 3 (cx_func_undefined) -- IC clear", read_status().sel.IC == 0);
+    CHECK("B4: stateless CF 3 (cx_func_undefined) -- IS clear", read_status().sel.IS == 0);
 
     cx_error_clear();
     cf_add_last();
@@ -185,10 +193,10 @@ int main(int argc, char *argv[]) {
 
     cx_error_clear();
     cf_add_oob();
-    print_status("after CF 5 (one past last)");
-    CHECK("B6: stateless CF 5 (oob) -- IF set",   read_status().sel.IF == 1);
-    CHECK("B6: stateless CF 5 (oob) -- IC clear", read_status().sel.IC == 0);
-    CHECK("B6: stateless CF 5 (oob) -- IS clear", read_status().sel.IS == 0);
+    print_status("after CF 7 (one past last)");
+    CHECK("B6: stateless CF 7 (oob) -- IF set",   read_status().sel.IF == 1);
+    CHECK("B6: stateless CF 7 (oob) -- IC clear", read_status().sel.IC == 0);
+    CHECK("B6: stateless CF 7 (oob) -- IS clear", read_status().sel.IS == 0);
 
     cx_error_clear();
     cf_mid_oob();
@@ -282,6 +290,79 @@ int main(int argc, char *argv[]) {
     CHECK("E3: muldiv CF 1023 (not registered) -- IF set", read_status().sel.IF == 1);
 
     cx_close(sel_md);
+    cx_sel(CX_LEGACY);
+
+    /* ------------------------------------------------------------------ */
+    printf("\n--- F. OF flag: dc=CX_OFF on stateful CXU ---\n");
+
+    sel_mac = cx_open(CX_GUID_MULACC, CX_NO_VIRT, -1);
+    assert(sel_mac > 0);
+    cx_sel(sel_mac);
+
+    /* Verify dc is DIRTY after cx_open */
+    {
+        cx_stctxs_t st = {.idx = CX_READ_STATUS()};
+        CHECK("F1: dc is DIRTY after cx_open", st.sel.dc == CX_DIRTY);
+    }
+
+    /* Force dc=CX_OFF via CF 1022 (write_status) */
+    {
+        cx_stctxs_t st = {.idx = CX_READ_STATUS()};
+        st.sel.dc = CX_OFF;
+        CX_WRITE_STATUS(st.idx);
+    }
+    {
+        cx_stctxs_t st = {.idx = CX_READ_STATUS()};
+        CHECK("F2: dc is OFF after write", st.sel.dc == CX_OFF);
+    }
+
+    /* Now attempt a CF — OF should be set, exception fires */
+    cx_error_clear();
+    cf_mac();
+    print_status("after CF 0 with dc=CX_OFF");
+    CHECK("F3: OF set when dc=CX_OFF", read_status().sel.OF == 1);
+    CHECK("F3: IF not set (OF fires before IF check)", read_status().sel.IF == 0);
+
+    cx_close(sel_mac);
+    cx_sel(CX_LEGACY);
+
+    /* ------------------------------------------------------------------ */
+    printf("\n--- G. Sentinel return values: IF (cx_func_undefined), OP, CU ---\n");
+
+    sel_as = cx_open(CX_GUID_ADDSUB, CX_NO_VIRT, -1);
+    assert(sel_as > 0);
+    cx_sel(sel_as);
+
+    /* CF 3: cx_func_undefined returns FUNC_SENTINEL_IF_INVALID_RET_0 → IF, out=0 */
+    cx_error_clear();
+    {
+        int32_t ret = cf_add_null2();
+        print_status("after CF 3 (cx_func_undefined sentinel)");
+        CHECK("G1: cx_func_undefined -- IF set",  read_status().sel.IF == 1);
+        CHECK("G1: cx_func_undefined -- ret == 0", ret == 0);
+    }
+
+    /* CF 5: cx_func_op_pos returns FUNC_SENTINEL_OP_POS → OP set, out=INT32_MAX */
+    cx_error_clear();
+    {
+        int32_t ret = cf_add_op();
+        print_status("after CF 5 (OP_POS sentinel)");
+        CHECK("G2: OP_POS sentinel -- OP set",          read_status().sel.OP == 1);
+        CHECK("G2: OP_POS sentinel -- IF clear",        read_status().sel.IF == 0);
+        CHECK("G2: OP_POS sentinel -- ret == INT32_MAX", ret == (int32_t)0x7FFFFFFF);
+    }
+
+    /* CF 6: cx_func_cu_bit0 returns FUNC_SENTINEL_CU_CUSTOM_BIT_0 → CU set, out=-1 */
+    cx_error_clear();
+    {
+        int32_t ret = cf_add_cu();
+        print_status("after CF 6 (CU_CUSTOM_BIT_0 sentinel)");
+        CHECK("G3: CU_BIT_0 sentinel -- CU set",   read_status().sel.CU == 1);
+        CHECK("G3: CU_BIT_0 sentinel -- IF clear", read_status().sel.IF == 0);
+        CHECK("G3: CU_BIT_0 sentinel -- ret == -1", ret == -1);
+    }
+
+    cx_close(sel_as);
     cx_sel(CX_LEGACY);
 
     /* ------------------------------------------------------------------ */
